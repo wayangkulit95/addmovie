@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOD Management Panel</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        form, .vod-item { margin-bottom: 20px; border: 1px solid #ccc; padding: 10px; }
+        input, button { margin: 5px; }
+        .section { margin-top: 30px; }
+        .preview { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>VOD Management Panel</h1>
+    <form id="vod-form">
+        <input type="hidden" name="id" id="vod-id">
+        <input type="text" placeholder="Title" name="title" required>
+        <input type="url" placeholder="Video URL" name="url" required>
+        <input type="url" placeholder="Logo URL" name="logo" required>
+        <input type="text" placeholder="Type (movie/series)" name="type" required>
+        <input type="text" placeholder="Group Title" name="groupTitle" required>
+        <button type="submit">Add VOD</button>
+    </form>
+
+    <div class="preview" id="preview-section" style="display: none;">
+        <h2>Recently Added:</h2>
+        <div id="preview-content"></div>
+    </div>
+
+    <div class="section" id="movies-section">
+        <h2>Movies</h2>
+        <div id="movies-list"></div>
+    </div>
+
+    <div class="section" id="series-section">
+        <h2>Series</h2>
+        <div id="series-list"></div>
+    </div>
+
+    <script>
+        document.getElementById('vod-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+            const method = data.id ? 'PUT' : 'POST';
+            const url = data.id ? `/api/vod/${data.id}` : '/api/vod';
+
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+
+            const result = await response.json();
+            alert(result.message);
+            fetchVodContent(); // Refresh the list
+            displayPreview(data); // Show preview of the added entry
+            event.target.reset(); // Clear the form
+        });
+
+        async function fetchVodContent() {
+            const response = await fetch('/api/vod');
+            const vodContent = await response.json();
+            const moviesList = document.getElementById('movies-list');
+            const seriesList = document.getElementById('series-list');
+            moviesList.innerHTML = '';
+            seriesList.innerHTML = '';
+
+            vodContent.forEach(vod => {
+                const div = document.createElement('div');
+                div.className = 'vod-item';
+                div.innerHTML = `
+                    <h3>${vod.title}</h3>
+                    <img src="${vod.logo}" alt="${vod.title} logo" style="width: 100px;">
+                    <a href="${vod.url}" target="_blank">Watch Now</a>
+                    <button onclick="editVod(${vod.id})">Edit</button>
+                    <button onclick="deleteVod(${vod.id})">Delete</button>
+                `;
+                if (vod.type.toLowerCase() === 'movie') {
+                    moviesList.appendChild(div);
+                } else if (vod.type.toLowerCase() === 'series') {
+                    seriesList.appendChild(div);
+                }
+            });
+        }
+
+        async function deleteVod(id) {
+            const response = await fetch(`/api/vod/${id}`, {
+                method: 'DELETE',
+            });
+            const result = await response.json();
+            alert(result.message);
+            fetchVodContent(); // Refresh the list
+        }
+
+        function editVod(id) {
+            const vodItem = document.querySelector(`.vod-item:nth-child(${id})`);
+            const title = vodItem.querySelector('h3').innerText;
+            const url = vodItem.querySelector('a').href;
+            const logo = vodItem.querySelector('img').src;
+
+            document.getElementById('vod-id').value = id;
+            document.querySelector('input[name="title"]').value = title;
+            document.querySelector('input[name="url"]').value = url;
+            document.querySelector('input[name="logo"]').value = logo;
+            // Additional fields like type and groupTitle should also be filled in if needed
+        }
+
+        function displayPreview(data) {
+            const previewSection = document.getElementById('preview-section');
+            const previewContent = document.getElementById('preview-content');
+
+            previewContent.innerHTML = `
+                <h3>${data.title}</h3>
+                <img src="${data.logo}" alt="${data.title} logo" style="width: 100px;">
+            `;
+            previewSection.style.display = 'block'; // Show the preview section
+        }
+        async function fetchVodContent() {
+            const response = await fetch('/api/vod');
+            const vodContent = await response.json();
+            const moviesList = document.getElementById('movies-list');
+            const seriesList = document.getElementById('series-list');
+            moviesList.innerHTML = '';
+            seriesList.innerHTML = '';
+        
+            vodContent.forEach(vod => {
+                const div = document.createElement('div');
+                div.className = 'vod-item';
+                div.innerHTML = `
+                    <h3>${vod.title}</h3>
+                    <img src="${vod.logo}" alt="${vod.title} logo" style="width: 100px;">
+                    <a href="${vod.url}" target="_blank">Watch Now</a>
+                    <button onclick="editVod(${vod.id})">Edit</button>
+                    <button onclick="deleteVod(${vod.id})">Delete</button>
+                `;
+                if (vod.type.toLowerCase() === 'movie') {
+                    moviesList.appendChild(div);
+                } else if (vod.type.toLowerCase() === 'series') {
+                    seriesList.appendChild(div);
+                }
+            });
+        }
+        
+        function editVod(id) {
+            const vodItem = document.querySelector(`.vod-item:nth-child(${id})`);
+            const title = vodItem.querySelector('h3').innerText;
+            const url = vodItem.querySelector('a').href;
+            const logo = vodItem.querySelector('img').src;
+        
+            document.getElementById('vod-id').value = id;
+            document.querySelector('input[name="title"]').value = title;
+            document.querySelector('input[name="url"]').value = url;
+            document.querySelector('input[name="logo"]').value = logo;
+            // Fill in other fields as needed
+        }
+        
+        window.onload = fetchVodContent;
+    </script>
+</body>
+</html>
